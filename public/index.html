@@ -1070,6 +1070,59 @@
 </div>
 
 <script>
+    // 1. Initialisation immédiate
+    const supabaseUrl = 'https://mzzerkdpmwsonaouqrvu.supabase.co';
+    const supabaseKey = 'sb_publishable_DSC5hm8vVAHT9QWwFLVkPw_9YXzKkwl';
+    
+    // On crée l'objet supabase globalement
+    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    console.log("Tentative de connexion Supabase...");
+
+    // 2. Ta fonction pour charger les invités
+    let realtimeChannel = null;
+    async function loadGuests() {
+        try {
+            const { data, error } = await window.supabase
+                .from('invites')
+                .select('*')
+                .order('nom');
+
+            if (error) throw error;
+            
+            console.log("Données reçues :", data);
+            if (typeof renderGuests === "function") renderGuests(data);
+            
+            // Setup realtime listener (une seule fois)
+            if (!realtimeChannel) {
+                console.log("Configuration du listener temps réel...");
+                realtimeChannel = window.supabase
+                    .channel('public:invites')
+                    .on('postgres_changes', 
+                        { event: 'UPDATE', schema: 'public', table: 'invites' },
+                        (payload) => {
+                            console.log("Modification détectée:", payload);
+                            loadGuests();
+                        }
+                    )
+                    .on('postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'invites' },
+                        (payload) => {
+                            console.log("Nouvel invité ajouté:", payload);
+                            loadGuests();
+                        }
+                    )
+                    .subscribe();
+            }
+            
+        } catch (err) {
+            console.error("Erreur de chargement :", err.message);
+        }
+    }
+
+    // Lancer au chargement de la page
+    document.addEventListener('DOMContentLoaded', loadGuests);
+
     // ── Data ──────────────────────────────────────────────
     let guestData = {
         tables: {
@@ -1095,58 +1148,6 @@
     let currentFilter = 'all';
     let selectedGuest = null;
 
-    const supabaseUrl = 'https://mzzerkdpmwsonaouqrvu.supabase.co';
-    const supabaseKey = 'sb_publishable_DSC5hm8vVAHT9QWwFLVkPw_9YXzKkwl';
-    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-    async function fetchGuests() {
-        const { data, error } = await supabaseClient
-            .from('invites')
-            .select('*')
-            .order('nom', { ascending: true });
-
-        if (error) {
-            console.error('Erreur Supabase fetch:', error);
-            return;
-        }
-
-        if (data) {
-            renderList(data);
-        }
-    }
-
-    supabaseClient
-        .channel('schema-db-changes')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'invites' }, (payload) => {
-            console.log('Changement reçu !', payload);
-            fetchGuests(); // Relance l'affichage
-        })
-        .subscribe();
-
-    function renderList(data) {
-        // Reset tables et vider le contenu pour recalculer
-        Object.keys(guestData.tables).forEach(tableNum => {
-            guestData.tables[tableNum].guests = [];
-        });
-
-        data.forEach(item => {
-            const tableNum = String(item.table).padStart(2, '0');
-            if (!guestData.tables[tableNum]) {
-                guestData.tables[tableNum] = { label: `Table ${tableNum}`, guests: [] };
-            }
-            guestData.tables[tableNum].guests.push({
-                id: item.id,
-                name: item.nom || item.name || 'Invité',
-                arrived: item.est_present || false,
-                timestamp: item.timestamp || null
-            });
-        });
-
-        renderGuestsList();
-        updateStats();
-        renderTableView();
-    }
-
     let initialGuestsList = {
         "01": ["M. Rock d'Almeida","Natacha d'Almeida","Calixta d'Almeida","Stan d'Almeida","M. et Mme Max d'Almeida","Mme Euphrasie","Mme Tassi Bertho","M. Charles"],
         "02": ["Dédé Rosemonde","Maître Daniel d'Almeida","Charly d'Almeida","Viviano","Hermine","Lynos"],
@@ -1166,23 +1167,59 @@
         "16": ["Mme Tchanhoun Valérie","Mme Parfaite Sossouhounto","FOFO Ayi","MR Christian Amasse","Mme Aurore Talon","MR Aurélien SAH","Carine"]
     };
 
+    // ── Render guests from Supabase data ─────────────────
+    function renderGuests(supabaseData) {
+        if (!supabaseData || !Array.isArray(supabaseData)) {
+            console.warn("renderGuests: Données invalides ou vides");
+            return;
+        }
+
+        console.log(`renderGuests: Traitement de ${supabaseData.length} invités`);
+
+        // Réinitialiser les tables
+        Object.keys(guestData.tables).forEach(t => {
+            guestData.tables[t].guests = [];
+        });
+
+        // Mapper les données Supabase vers guestData
+        supabaseData.forEach(row => {
+            const tableNum = String(row.table || "01").padStart(2, "0");
+            if (guestData.tables[tableNum]) {
+                guestData.tables[tableNum].guests.push({
+                    id: row.id,
+                    name: row.nom,
+                    arrived: row.est_present === true,
+                    timestamp: row.timestamp
+                });
+            }
+        });
+
+        // Fallback: si aucune donnée, utiliser initialGuestsList
+        if (!Object.values(guestData.tables).some(t => t.guests.length)) {
+            console.log("renderGuests: Aucune donnée Supabase, utilisation fallback local");
+            Object.keys(initialGuestsList).forEach(t => {
+                guestData.tables[t].guests = initialGuestsList[t].map(name => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name, arrived: false, timestamp: null
+                }));
+            });
+        }
+
+        // Sauvegarder en localStorage
+        localStorage.setItem('guestData', JSON.stringify(guestData));
+
+        // Mettre à jour l'affichage
+        renderGuestsList();
+        updateStats();
+        renderTableView();
+        renderReports();
+    }
+
     // ── Init ──────────────────────────────────────────────
     window.onload = async function() {
         const saved = localStorage.getItem('guestData');
         if (saved) {
             guestData = JSON.parse(saved);
-        } else {
-            await fetchGuests();
-
-            // Fallback local si Supabase est vide
-            if (!Object.values(guestData.tables).some(t => t.guests.length)) {
-                Object.keys(initialGuestsList).forEach(t => {
-                    guestData.tables[t].guests = initialGuestsList[t].map(name => ({
-                        id: Math.random().toString(36).substr(2, 9),
-                        name, arrived: false, timestamp: null
-                    }));
-                });
-            }
         }
 
         const sel = document.getElementById('guestTable');
@@ -1263,23 +1300,28 @@
         const g = guestData.tables[tableNum].guests.find(x => x.id === guestId);
         if (!g) return;
 
-        const { error } = await supabaseClient
-            .from('invites')
-            .update({ est_present: !g.arrived })
-            .eq('id', guestId);
+        try {
+            const { error } = await window.supabase
+                .from('invites')
+                .update({ est_present: !g.arrived })
+                .eq('id', guestId);
 
-        if (error) {
-            alert('Erreur de synchronisation !');
-            console.error('Supabase toggle error', error);
-            return;
+            if (error) {
+                alert('Erreur de synchronisation !');
+                console.error('Supabase toggle error', error);
+                return;
+            }
+
+            g.arrived = !g.arrived;
+            g.timestamp = g.arrived ? new Date().toISOString() : null;
+            saveData();
+            renderGuestsList();
+            updateStats();
+            showToast(`${g.name} — ${g.arrived ? 'Arrivé(e)' : 'En attente'}`);
+        } catch (err) {
+            alert('Erreur: ' + err.message);
+            console.error('togglePresence error:', err);
         }
-
-        g.arrived = !g.arrived;
-        g.timestamp = g.arrived ? new Date().toISOString() : null;
-        saveData();
-        renderGuestsList();
-        updateStats();
-        showToast(`${g.name} — ${g.arrived ? 'Arrivé(e)' : 'En attente'}`);
     }
 
     function selectGuest(guestId, tableNum) {
@@ -1399,17 +1441,34 @@
         document.getElementById(id).classList.remove('open');
     }
 
-    function addGuest() {
+    async function addGuest() {
         const name  = document.getElementById('guestName').value.trim();
         const table = document.getElementById('guestTable').value;
         if (!name || !table) { showToast('Veuillez remplir tous les champs obligatoires.'); return; }
 
-        guestData.tables[table].guests.push({
+        const newGuest = {
             id: Math.random().toString(36).substr(2,9),
             name, arrived: false, timestamp: null
-        });
+        };
 
+        // Ajouter localement d'abord (feedback immédiat)
+        guestData.tables[table].guests.push(newGuest);
         saveData();
+
+        // Insérer dans Supabase (async)
+        try {
+            const { error } = await window.supabase
+                .from('invites')
+                .insert([{ id: newGuest.id, nom: name, est_present: false, table: parseInt(table) }]);
+            
+            if (error) {
+                console.error('Erreur insertion Supabase:', error);
+                showToast('⚠️ Erreur lors de la sauvegarde en base');
+            }
+        } catch (err) {
+            console.error('addGuest Supabase error:', err);
+        }
+
         document.getElementById('guestName').value  = '';
         document.getElementById('guestTable').value = '';
         closeModal('addGuestModal');
