@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Invités — Accueil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --ink:       #111827;
+            --ink-muted: #6b7280;
+            --ink-faint: #9ca3af;
+            --surface:   #ffffff;
+            --surface-2: #f9fafb;
+            --surface-3: #f3f4f6;
+            --border:    #e5e7eb;
+            --border-strong: #d1d5db;
+            --accent:    #1d4ed8;
+            --accent-hover: #1e40af;
+            --accent-light: #eff6ff;
+            --success:   #16a34a;
+            --success-light: #f0fdf4;
+            --success-border: #bbf7d0;
+            --warning:   #d97706;
+            --warning-light: #fffbeb;
+            --danger:    #dc2626;
+            --danger-light: #fef2f2;
+            --arrived-bg: #f0fdf4;
+            --radius-sm: 6px;
+            --radius:    10px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+            --shadow:    0 4px 12px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+            --shadow-lg: 0 16px 48px rgba(0,0,0,.12), 0 4px 16px rgba(0,0,0,.08);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #eef0f5;
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--ink);
+            font-size: 14px;
+        }
+
+        /* ── Layout ───────────────────────────────── */
+        .app {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--ink);
+            color: white;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            padding: 28px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,.1);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.6em;
+            font-weight: 400;
+            letter-spacing: -.01em;
+        }
+
+        .header-sub {
+            font-size: .8em;
+            opacity: .55;
+            margin-top: 2px;
+            font-weight: 300;
+        }
+
+        .sync-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .78em;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.15);
+            color: rgba(255,255,255,.8);
+            white-space: nowrap;
+            transition: all .3s;
+        }
+
+        .sync-pill.syncing {
+            background: rgba(217,119,6,.2);
+            border-color: rgba(217,119,6,.4);
+            color: #fbbf24;
+        }
+
+        .sync-pill svg { flex-shrink: 0; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            background: var(--surface);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        /* ── Main panel ───────────────────────────── */
+        .main-panel {
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Tabs ─────────────────────────────────── */
+        .tabs-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-2);
+            padding: 0 24px;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 14px 4px;
+            margin-right: 28px;
+            font-size: .84em;
+            font-weight: 500;
+            color: var(--ink-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+
+        .tab:hover { color: var(--ink); }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content { display: none; padding: 24px; }
+        .tab-content.active { display: block; }
+
+        /* ── Search & filters ─────────────────────── */
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .input-wrap {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink-faint);
+            pointer-events: none;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: .9em;
+            color: var(--ink);
+            background: var(--surface);
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .input-wrap input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(29,78,216,.1);
+        }
+
+        .input-wrap input::placeholder { color: var(--ink-faint); }
+
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border: 1px solid var(--border-strong);
+            background: var(--surface);
+            border-radius: 20px;
+            font-size: .8em;
+            font-weight: 500;
+            color: var(--ink-muted);
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+        .filter-chip.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* ── Guest list ───────────────────────────── */
+        .guests-list {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            max-height: 560px;
+            overflow-y: auto;
+        }
+
+        .guests-list::-webkit-scrollbar { width: 5px; }
+        .guests-list::-webkit-scrollbar-track { background: transparent; }
+        .guests-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+
+        .guest-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            transition: background .15s;
+        }
+
+        .guest-item:last-child { border-bottom: none; }
+
+        .guest-item:hover { background: var(--surface-2); }
+
+        .guest-item.arrived { background: var(--arrived-bg); }
+        .guest-item.arrived:hover { background: #e8fdf1; }
+
+        .guest-info {
+            cursor: pointer;
+            min-width: 0;
+        }
+
+        .guest-name {
+            font-weight: 500;
+            font-size: .9em;
+            color: var(--ink);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .guest-meta {
+            font-size: .78em;
+            color: var(--ink-faint);
+            margin-top: 2px;
+        }
+
+        .table-badge {
+            background: var(--surface-3);
+            color: var(--ink-muted);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: .75em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* Custom checkbox */
+        .check-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .check-wrap input[type="checkbox"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-strong);
+            border-radius: 5px;
+            background: var(--surface);
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .check-wrap input[type="checkbox"]:checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .check-wrap input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            width: 5px;
+            height: 9px;
+            border-right: 2px solid white;
+            border-bottom: 2px solid white;
+            transform: rotate(45deg) translate(-1px, -1px);
+        }
+
+        /* ── Table view grid ──────────────────────── */
+        .table-view-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow .2s;
+        }
+
+        .table-card:hover { box-shadow: var(--shadow); }
+
+        .table-card-header {
+            padding: 12px 16px;
+            background: var(--ink);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-card-header h5 {
+            font-size: .85em;
+            font-weight: 600;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+        }
+
+        .table-card-count {
+            font-size: .75em;
+            opacity: .65;
+        }
+
+        .table-card-body {
+            padding: 12px 16px;
+        }
+
+        .table-card-progress {
+            height: 3px;
+            background: var(--surface-3);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .table-card-progress-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 10px;
+            transition: width .4s ease;
+        }
+
+        .guest-row-small {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 0;
+            font-size: .8em;
+            color: var(--ink-muted);
+        }
+
+        .guest-row-small .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border-strong);
+            flex-shrink: 0;
+        }
+
+        .guest-row-small.is-arrived { color: var(--ink); }
+        .guest-row-small.is-arrived .dot { background: var(--success); }
+
+        /* ── Reports ──────────────────────────────── */
+        .reports-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .report-kpi {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .report-kpi .kpi-val {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2em;
+            color: var(--ink);
+            line-height: 1;
+        }
+
+        .report-kpi .kpi-label {
+            font-size: .78em;
+            color: var(--ink-muted);
+            margin-top: 4px;
+        }
+
+        .reports-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .85em;
+        }
+
+        .reports-table thead tr {
+            background: var(--ink);
+            color: white;
+        }
+
+        .reports-table th, .reports-table td {
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        .reports-table th { font-weight: 500; font-size: .8em; letter-spacing: .04em; text-transform: uppercase; }
+
+        .reports-table tbody tr { border-bottom: 1px solid var(--border); }
+        .reports-table tbody tr:hover { background: var(--surface-2); }
+
+        .progress-bar {
+            width: 80px;
+            height: 5px;
+            background: var(--surface-3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 10px;
+        }
+
+        /* ── Sidebar ──────────────────────────────── */
+        .sidebar {
+            background: var(--surface-2);
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-label {
+            font-size: .7em;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            margin-bottom: 12px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 12px;
+            text-align: center;
+        }
+
+        .stat-box .val {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.9em;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+        .stat-box .lbl {
+            font-size: .72em;
+            color: var(--ink-faint);
+            margin-top: 3px;
+        }
+
+        .stat-box.success .val { color: var(--success); }
+        .stat-box.warning .val { color: var(--warning); }
+        .stat-box.accent  .val { color: var(--accent); }
+
+        /* QR section */
+        .qr-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .qr-placeholder {
+            color: var(--ink-faint);
+            font-size: .8em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qr-guest-name {
+            font-weight: 600;
+            font-size: .85em;
+            color: var(--ink);
+        }
+
+        .qr-table-name {
+            font-size: .75em;
+            color: var(--ink-muted);
+        }
+
+        /* ── Buttons ──────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: .85em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .btn svg { flex-shrink: 0; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(29,78,216,.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--ink);
+            border: 1px solid var(--border-strong);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #15803d;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-full { width: 100%; justify-content: center; }
+
+        /* action buttons row */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        /* ── Toast ────────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--ink);
+            color: white;
+            padding: 12px 18px;
+            border-radius: var(--radius);
+            font-size: .85em;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all .3s cubic-bezier(.34,1.56,.64,1);
+            z-index: 2000;
+            pointer-events: none;
+            max-width: 340px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { background: var(--success); }
+
+        /* ── Modal ────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 460px;
+            box-shadow: var(--shadow-lg);
+            animation: modal-in .25s ease;
+        }
+
+        @keyframes modal-in {
+            from { opacity: 0; transform: scale(.96) translateY(8px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2em;
+            font-weight: 400;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--ink-muted);
+            transition: all .2s;
+        }
+
+        .modal-close:hover { background: var(--surface-3); color: var(--ink); }
+
+        .modal-body { padding: 24px; }
+
+        .form-group { margin-bottom: 16px; }
+
+        .form-group label {
+            display: block;
+            font-size: .82em;
+            font-weight: 500;
+            color: var(--ink-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: .9em;
+            color: var(--ink);
+            background: var(--surface);
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(29,78,216,.1);
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ── Responsive ───────────────────────────── */
+        @media (max-width: 860px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .sidebar { border-top: 1px solid var(--border); }
+            .reports-summary { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        @media (max-width: 560px) {
+            body { padding: 10px; }
+            .header { padding: 18px; flex-wrap: wrap; }
+            .reports-summary { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .app { max-width: none; }
+            .header { border-radius: 0; }
+            .main-grid { box-shadow: none; border-radius: 0; }
+            .sidebar, .tabs-bar, .search-row, .filter-row, .action-row, .modal-overlay, .toast { display: none !important; }
+            .tab-content { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-brand">
+            <div class="header-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Gestion des Invités</h1>
+                <div class="header-sub">Système d'accueil — Check-in en temps réel</div>
+            </div>
+        </div>
+        <div class="sync-pill" id="syncStatus">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Synchronisé
+        </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+        <!-- LEFT PANEL -->
+        <div class="main-panel">
+            <!-- TABS -->
+            <div class="tabs-bar">
+                <div class="tab active" data-tab="reception" onclick="switchTab('reception', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                    Accueil
+                </div>
+                <div class="tab" data-tab="tables" onclick="switchTab('tables', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Vue des tables
+                </div>
+                <div class="tab" data-tab="reports" onclick="switchTab('reports', this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Rapports
+                </div>
+            </div>
+
+            <!-- TAB 1: RECEPTION -->
+            <div id="reception" class="tab-content active">
+                <div class="search-row">
+                    <div class="input-wrap">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="searchInput" placeholder="Rechercher un invité..." onkeyup="filterGuests()">
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddGuestModal()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Ajouter
+                    </button>
+                </div>
+
+                <div class="filter-row">
+                    <button class="filter-chip active" onclick="setFilter('all', this)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        Tous
+                    </button>
+                    <button class="filter-chip" onclick="setFilter('arrived', this)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Arrivés
+                    </button>
+                    <button class="filter-chip" onclick="setFilter('pending', this)">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        En attente
+                    </button>
+                </div>
+
+                <div class="guests-list" id="guestsList"></div>
+            </div>
+
+            <!-- TAB 2: TABLES -->
+            <div id="tables" class="tab-content">
+                <div class="action-row">
+                    <button class="btn btn-secondary" onclick="printTableCards()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        Imprimer
+                    </button>
+                </div>
+                <div class="table-view-grid" id="tableViewGrid"></div>
+            </div>
+
+            <!-- TAB 3: REPORTS -->
+            <div id="reports" class="tab-content">
+                <div class="action-row">
+                    <button class="btn btn-secondary" onclick="downloadReport()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Rapport TXT
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportCSV()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Export CSV
+                    </button>
+                </div>
+                <div id="reportsContent"></div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <!-- Stats -->
+            <div class="sidebar-section">
+                <div class="sidebar-label">Statistiques</div>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="val" id="totalGuests">0</div>
+                        <div class="lbl">Total</div>
+                    </div>
+                    <div class="stat-box success">
+                        <div class="val" id="arrivedGuests">0</div>
+                        <div class="lbl">Arrivés</div>
+                    </div>
+                    <div class="stat-box warning">
+                        <div class="val" id="pendingGuests">0</div>
+                        <div class="lbl">En attente</div>
+                    </div>
+                    <div class="stat-box accent">
+                        <div class="val" id="totalTables">16</div>
+                        <div class="lbl">Tables</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR -->
+            <div class="sidebar-section">
+                <div class="sidebar-label">Code QR — Invité sélectionné</div>
+                <div class="qr-wrap" id="qrWrap">
+                    <div class="qr-placeholder" id="qrPlaceholder">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="currentColor"/><rect x="16" y="5" width="3" height="3" fill="currentColor"/><rect x="16" y="16" width="3" height="3" fill="currentColor"/></svg>
+                        Sélectionnez un invité
+                    </div>
+                    <div id="qrcode" style="display:none"></div>
+                    <div id="qrGuestName" class="qr-guest-name" style="display:none"></div>
+                    <div id="qrTableName"  class="qr-table-name"  style="display:none"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="sidebar-section">
+                <div class="sidebar-label">Actions</div>
+                <button class="btn btn-primary btn-full" onclick="syncData()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Synchroniser
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="addGuestModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Ajouter un invité</h2>
+            <div class="modal-close" onclick="closeModal('addGuestModal')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Nom complet *</label>
+                <input type="text" id="guestName" placeholder="Ex : M. et Mme Dupont" required>
+            </div>
+            <div class="form-group">
+                <label>Table *</label>
+                <select id="guestTable" required>
+                    <option value="">Sélectionner une table...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nombre de personnes</label>
+                <input type="number" id="guestCount" value="1" min="1">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('addGuestModal')">Annuler</button>
+            <button class="btn btn-success" onclick="addGuest()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Ajouter
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg"></span>
+</div>
+
+<script>
+    // ── Data ──────────────────────────────────────────────
+    let guestData = {
+        tables: {
+            "01": { label: "Table 01", guests: [] },
+            "02": { label: "Table 02", guests: [] },
+            "03": { label: "Table 03", guests: [] },
+            "04": { label: "Table 04", guests: [] },
+            "05": { label: "Table 05", guests: [] },
+            "06": { label: "Table 06", guests: [] },
+            "07": { label: "Table 07", guests: [] },
+            "08": { label: "Table 08", guests: [] },
+            "09": { label: "Table 09", guests: [] },
+            "10": { label: "Table 10 (FRADA)", guests: [] },
+            "11": { label: "Table 11 (Artistes)", guests: [] },
+            "12": { label: "Table 12", guests: [] },
+            "13": { label: "Table 13", guests: [] },
+            "14": { label: "Table 14", guests: [] },
+            "15": { label: "Table 15", guests: [] },
+            "16": { label: "Table 16", guests: [] }
+        }
+    };
+
+    let currentFilter = 'all';
+    let selectedGuest = null;
+
+    const initialGuestsList = {
+        "01": ["M. Rock d'Almeida","Natacha d'Almeida","Calixta d'Almeida","Stan d'Almeida","M. et Mme Max d'Almeida","Mme Euphrasie","Mme Tassi Bertho","M. Charles"],
+        "02": ["Dédé Rosemonde","Maître Daniel d'Almeida","Charly d'Almeida","Viviano","Hermine","Lynos"],
+        "03": ["Pedro","Ives","Edwige","Fo Koffi","Irène","Chico","Vincent","Patricia"],
+        "04": ["Amir / Ayélé","Charbo / Mathis","Christina / Dani","Dotou / Stella","Leslie","Esther","Hans","Irina"],
+        "05": ["MR et Mme Zinsou","MR et Mme Cyro","Daris","Cynelle","Polycarpe","Maître Fransisca","MR Kola OKOUDJOU"],
+        "06": ["MR Gabin Cakpo","MR et Mme Edon","Delonix","MR Tiburce Montcho","MR Richard","MR Kader","Lydie"],
+        "07": ["MR et Mme Hounkpatin","MR Francis Chahaunka","Josiane Chahaunka","Nicole Chahaunka","Elvine Chahaunka","Carole Gandonou","Hélène Saley","Nadine","Elvire Hervé"],
+        "08": ["Famille Gonçalves","Mme d'Almeida Agathe","Mme Mehinto Josiane","MR Charles Benon","Mme Nadine Ahounou","Mme Yolande Houngué","Mme Adjibi"],
+        "09": ["Mme Georgia","Mme AMOZonahoun","Mme et MR Aplogan JP","Mme et MR Faraj","Tante Mir","Rony"],
+        "10": ["Mme et MR d'Almeida Georges","MR et Mme Marie Constance","Spero d'Almeida","Mme Valerie d'Almeida","MR Sosthène d'Almeida","MR et Mme Houeto Lydie"],
+        "11": ["Sagbohan","Nel","Zeinab","Richard Flash","Nikanor","Pépé Oléka","Petit Miguelito"],
+        "12": ["Mme Fransisca d'Almeida","Mme Guedegbé","FO Clément","MR et Mme Dagnon","Mme et MR Houngué Viviane","Mme Abalo"],
+        "13": ["Mme Sath","Mme Lisette Gansou","Mme Olga","Mme Joslyne","Mme Sylvie Gansou","Mme Georgette","MR Mme POSSOU","MR Rodolphe","MR Gérard"],
+        "14": ["Mme Afoussath","Mme Rachelle AMAKOU","MR Prospère","MR Atohoun","Mme Mathilde","Mme Nadia Gansou","Mme Prisca Ahouandjinou","MR Frederik","Mme Christelle"],
+        "15": ["Poupette Binazon","Eric Adanho","Stephan Johson","Jeanette Kohoke","Magloire Likiti","Eli Likiti","Allegra","Ella Adanho","Estelle Adanho"],
+        "16": ["Mme Tchanhoun Valérie","Mme Parfaite Sossouhounto","FOFO Ayi","MR Christian Amasse","Mme Aurore Talon","MR Aurélien SAH","Carine"]
+    };
+
+    // ── Init ──────────────────────────────────────────────
+    window.onload = function() {
+        const saved = localStorage.getItem('guestData');
+        if (saved) {
+            guestData = JSON.parse(saved);
+        } else {
+            Object.keys(initialGuestsList).forEach(t => {
+                guestData.tables[t].guests = initialGuestsList[t].map(name => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name, arrived: false, timestamp: null
+                }));
+            });
+        }
+
+        const sel = document.getElementById('guestTable');
+        Object.keys(guestData.tables).forEach(t => {
+            const o = document.createElement('option');
+            o.value = t;
+            o.text = guestData.tables[t].label;
+            sel.appendChild(o);
+        });
+
+        renderGuestsList();
+        updateStats();
+        renderTableView();
+        renderReports();
+    };
+
+    // ── Tab switching ─────────────────────────────────────
+    function switchTab(name, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(name).classList.add('active');
+        el.classList.add('active');
+        if (name === 'tables') renderTableView();
+        if (name === 'reports') renderReports();
+    }
+
+    // ── Render guests list ────────────────────────────────
+    function renderGuestsList() {
+        const list = document.getElementById('guestsList');
+        list.innerHTML = '';
+        const search = document.getElementById('searchInput').value.toLowerCase().trim();
+
+        let items = [];
+        Object.keys(guestData.tables).forEach(t => {
+            guestData.tables[t].guests.forEach(g => {
+                if (currentFilter === 'arrived' && !g.arrived) return;
+                if (currentFilter === 'pending' && g.arrived) return;
+                if (search && !g.name.toLowerCase().includes(search)) return;
+                items.push({ ...g, table: t });
+            });
+        });
+
+        if (!items.length) {
+            list.innerHTML = `<div style="padding:32px;text-align:center;color:var(--ink-faint);font-size:.85em;">
+                <svg style="display:block;margin:0 auto 10px" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Aucun résultat
+            </div>`;
+            return;
+        }
+
+        items.forEach(g => {
+            const el = document.createElement('div');
+            el.className = 'guest-item' + (g.arrived ? ' arrived' : '');
+            el.innerHTML = `
+                <div class="guest-info" onclick="selectGuest('${g.id}','${g.table}')">
+                    <div class="guest-name">${escHtml(g.name)}</div>
+                    <div class="guest-meta">Table ${g.table}${g.timestamp ? ' · ' + new Date(g.timestamp).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : ''}</div>
+                </div>
+                <div class="table-badge">T${g.table}</div>
+                <div class="check-wrap">
+                    <input type="checkbox" ${g.arrived ? 'checked' : ''} onchange="toggleArrived('${g.id}','${g.table}')">
+                </div>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function filterGuests() { renderGuestsList(); }
+
+    function setFilter(f, el) {
+        currentFilter = f;
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        renderGuestsList();
+    }
+
+    function toggleArrived(guestId, tableNum) {
+        const g = guestData.tables[tableNum].guests.find(x => x.id === guestId);
+        if (!g) return;
+        g.arrived = !g.arrived;
+        g.timestamp = g.arrived ? new Date().toISOString() : null;
+        saveData();
+        renderGuestsList();
+        updateStats();
+        showToast(`${g.name} — ${g.arrived ? 'Arrivé(e)' : 'En attente'}`);
+    }
+
+    function selectGuest(guestId, tableNum) {
+        const g = guestData.tables[tableNum].guests.find(x => x.id === guestId);
+        if (!g) return;
+        selectedGuest = g;
+
+        document.getElementById('qrPlaceholder').style.display = 'none';
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.style.display = 'inline-block';
+        qrDiv.innerHTML = '';
+        new QRCode(qrDiv, {
+            text: `${g.name}|Table ${tableNum}`,
+            width: 140, height: 140,
+            colorDark: '#111827', colorLight: '#ffffff'
+        });
+        const nameEl = document.getElementById('qrGuestName');
+        const tableEl = document.getElementById('qrTableName');
+        nameEl.textContent = g.name;
+        tableEl.textContent = guestData.tables[tableNum].label;
+        nameEl.style.display = 'block';
+        tableEl.style.display = 'block';
+    }
+
+    // ── Stats ─────────────────────────────────────────────
+    function updateStats() {
+        let total = 0, arrived = 0;
+        Object.keys(guestData.tables).forEach(t => {
+            guestData.tables[t].guests.forEach(g => { total++; if (g.arrived) arrived++; });
+        });
+        document.getElementById('totalGuests').textContent   = total;
+        document.getElementById('arrivedGuests').textContent = arrived;
+        document.getElementById('pendingGuests').textContent = total - arrived;
+    }
+
+    // ── Table view ────────────────────────────────────────
+    function renderTableView() {
+        const grid = document.getElementById('tableViewGrid');
+        grid.innerHTML = '';
+        Object.keys(guestData.tables).sort().forEach(t => {
+            const table = guestData.tables[t];
+            const arrived = table.guests.filter(g => g.arrived).length;
+            const total   = table.guests.length;
+            const pct     = total ? Math.round(arrived / total * 100) : 0;
+
+            const card = document.createElement('div');
+            card.className = 'table-card';
+            card.innerHTML = `
+                <div class="table-card-header">
+                    <h5>${escHtml(table.label)}</h5>
+                    <span class="table-card-count">${arrived}/${total}</span>
+                </div>
+                <div class="table-card-body">
+                    <div class="table-card-progress">
+                        <div class="table-card-progress-fill" style="width:${pct}%"></div>
+                    </div>
+                    ${table.guests.map(g => `
+                        <div class="guest-row-small ${g.arrived ? 'is-arrived' : ''}">
+                            <span class="dot"></span>
+                            ${escHtml(g.name)}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // ── Reports ───────────────────────────────────────────
+    function renderReports() {
+        const wrap = document.getElementById('reportsContent');
+        let totalGuests = 0, totalArrived = 0;
+        const rows = [];
+
+        Object.keys(guestData.tables).sort().forEach(t => {
+            const table   = guestData.tables[t];
+            const arrived = table.guests.filter(g => g.arrived).length;
+            const total   = table.guests.length;
+            totalGuests  += total;
+            totalArrived += arrived;
+            rows.push({ label: table.label, arrived, total, pct: total ? Math.round(arrived/total*100) : 0 });
+        });
+
+        const globalPct = totalGuests ? Math.round(totalArrived / totalGuests * 100) : 0;
+
+        wrap.innerHTML = `
+            <div class="reports-summary">
+                <div class="report-kpi"><div class="kpi-val">${totalGuests}</div><div class="kpi-label">Invités total</div></div>
+                <div class="report-kpi"><div class="kpi-val">${totalArrived}</div><div class="kpi-label">Présents</div></div>
+                <div class="report-kpi"><div class="kpi-val">${globalPct}%</div><div class="kpi-label">Taux de présence</div></div>
+            </div>
+            <table class="reports-table">
+                <thead><tr><th>Table</th><th>Présents</th><th>Total</th><th>Progression</th></tr></thead>
+                <tbody>
+                ${rows.map(r => `<tr>
+                    <td>${escHtml(r.label)}</td>
+                    <td>${r.arrived}</td>
+                    <td>${r.total}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="progress-bar"><div class="progress-bar-fill" style="width:${r.pct}%"></div></div>
+                            <span style="font-size:.78em;color:var(--ink-muted)">${r.pct}%</span>
+                        </div>
+                    </td>
+                </tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    // ── Modal ─────────────────────────────────────────────
+    function openAddGuestModal() {
+        document.getElementById('addGuestModal').classList.add('open');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+    }
+
+    function addGuest() {
+        const name  = document.getElementById('guestName').value.trim();
+        const table = document.getElementById('guestTable').value;
+        if (!name || !table) { showToast('Veuillez remplir tous les champs obligatoires.'); return; }
+
+        guestData.tables[table].guests.push({
+            id: Math.random().toString(36).substr(2,9),
+            name, arrived: false, timestamp: null
+        });
+
+        saveData();
+        document.getElementById('guestName').value  = '';
+        document.getElementById('guestTable').value = '';
+        closeModal('addGuestModal');
+        renderGuestsList();
+        updateStats();
+        renderTableView();
+        renderReports();
+        showToast(`${name} ajouté(e) à la ${guestData.tables[table].label}`);
+    }
+
+    // ── Persist ───────────────────────────────────────────
+    function saveData() {
+        localStorage.setItem('guestData', JSON.stringify(guestData));
+        syncData();
+    }
+
+    function syncData() {
+        const pill = document.getElementById('syncStatus');
+        pill.classList.add('syncing');
+        pill.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Synchronisation...`;
+        setTimeout(() => {
+            pill.classList.remove('syncing');
+            pill.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Synchronisé`;
+        }, 1400);
+    }
+
+    // ── Toast ─────────────────────────────────────────────
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3200);
+    }
+
+    // ── Export ────────────────────────────────────────────
+    function downloadReport() {
+        let txt = 'RAPPORT DE PRÉSENCE\n===================\n\n';
+        let tot = 0, arr = 0;
+        Object.keys(guestData.tables).sort().forEach(t => {
+            const table  = guestData.tables[t];
+            const arrived = table.guests.filter(g => g.arrived).length;
+            tot += table.guests.length; arr += arrived;
+            txt += `${table.label} — ${arrived}/${table.guests.length} présents\n`;
+            table.guests.forEach(g => { txt += `  ${g.name} — ${g.arrived ? 'Présent(e)' : 'En attente'}\n`; });
+            txt += '\n';
+        });
+        txt += `TOTAL : ${arr}/${tot} (${tot ? Math.round(arr/tot*100) : 0}%)\n`;
+        txt += `Date  : ${new Date().toLocaleString('fr-FR')}\n`;
+        dlBlob(txt, 'text/plain', `rapport_${Date.now()}.txt`);
+    }
+
+    function exportCSV() {
+        let csv = 'Nom,Table,Arrivé,Heure\n';
+        Object.keys(guestData.tables).sort().forEach(t => {
+            guestData.tables[t].guests.forEach(g => {
+                csv += `"${g.name}","Table ${t}","${g.arrived ? 'Oui' : 'Non'}","${g.timestamp ? new Date(g.timestamp).toLocaleTimeString('fr-FR') : ''}"\n`;
+            });
+        });
+        dlBlob(csv, 'text/csv', `invites_${Date.now()}.csv`);
+    }
+
+    function dlBlob(content, type, name) {
+        const a = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([content], { type })),
+            download: name
+        });
+        a.click();
+    }
+
+    function printTableCards() { window.print(); }
+
+    // ── Utils ─────────────────────────────────────────────
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('addGuestModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal('addGuestModal');
+    });
+</script>
+</body>
+</html>
