@@ -1097,10 +1097,10 @@
 
     const supabaseUrl = 'https://mzzerkdpmwsonaouqrvu.supabase.co';
     const supabaseKey = 'sb_publishable_DSC5hm8vVAHT9QWwFLVkPw_9YXzKkwl';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     async function fetchGuests() {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('invites')
             .select('*')
             .order('nom', { ascending: true });
@@ -1115,7 +1115,7 @@
         }
     }
 
-    supabase
+    supabaseClient
         .channel('schema-db-changes')
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'invites' }, (payload) => {
             console.log('Changement reçu !', payload);
@@ -1263,7 +1263,7 @@
         const g = guestData.tables[tableNum].guests.find(x => x.id === guestId);
         if (!g) return;
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('invites')
             .update({ est_present: !g.arrived })
             .eq('id', guestId);
