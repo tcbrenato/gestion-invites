@@ -1203,20 +1203,6 @@
             }
         });
 
-        // Fallback: si aucune donnée, utiliser initialGuestsList
-        if (!Object.values(guestData.tables).some(t => t.guests.length)) {
-            console.log("renderGuests: Aucune donnée Supabase, utilisation fallback local");
-            Object.keys(initialGuestsList).forEach(t => {
-                guestData.tables[t].guests = initialGuestsList[t].map(name => ({
-                    id: Math.random().toString(36).substr(2, 9),
-                    name, arrived: false, timestamp: null
-                }));
-            });
-        }
-
-        // Sauvegarder en localStorage
-        localStorage.setItem('guestData', JSON.stringify(guestData));
-
         // Mettre à jour l'affichage
         renderGuestsList();
         updateStats();
@@ -1226,11 +1212,6 @@
 
     // ── Init ──────────────────────────────────────────────
     window.onload = async function() {
-        const saved = localStorage.getItem('guestData');
-        if (saved) {
-            guestData = JSON.parse(saved);
-        }
-
         const sel = document.getElementById('guestTable');
         Object.keys(guestData.tables).forEach(t => {
             const o = document.createElement('option');
@@ -1238,11 +1219,8 @@
             o.text = guestData.tables[t].label;
             sel.appendChild(o);
         });
-
-        renderGuestsList();
-        updateStats();
-        renderTableView();
-        renderReports();
+        // Les données arrivent via loadGuests() → renderGuests()
+        // appelé par DOMContentLoaded plus bas
     };
 
     // ── Tab switching ─────────────────────────────────────
@@ -1490,7 +1468,6 @@
 
     // ── Persist ───────────────────────────────────────────
     function saveData() {
-        localStorage.setItem('guestData', JSON.stringify(guestData));
         syncData();
     }
 
